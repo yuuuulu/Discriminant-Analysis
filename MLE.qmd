@@ -1,0 +1,24 @@
+---
+title: "MLE-LRT"
+format: html
+editor: visual
+---
+
+### the statistical properties of the maximum-likelihood estimators(2.10)
+
+(1) unbiased estimators including asymptotically unbiased $\sigma^2$
+(2) minimum variance compared to all other unbiased estimators
+(3) consistent estimators(estimators differ from the true parameter value by a very small amount ) that are a set of sufficient statistics（containing all information in the original sample of size n.
+(4) $H_0$ is reduced model the difference of variables are the degrees of freedom in chi-square \###### likelihood-ratio test(test mle)
+
+By logging the Ls and multiplying them by -2, this statistic conveniently ends up with a chi-square distribution. This means we test whether there is a statistically significant improvement with reference to the χ2 distribution
+
+###### deviance
+
+To see whether our model has improved by adding a variable (or interaction, or squared term), we can compare the maximum of the likelihood function for each model (just like we compared the R2 before for OLS regressions). By logging the Ls and multiplying them by -2, this statistic conveniently ends up with a chi-square distribution. This means we test whether there is a statistically significant improvement with reference to the χ2 distribution \### (1)ML-LRT-compare the maximum of the likelihood function for each model.
+
+E(y)=$\pi$ is a constant-proba-of success. mle estimates y/n.
+
+so a large value of LR statistics indicates at least one of the regressor variables in logistic model is important \#### (2) deviance saturated model and the current model(full model) D= 2lnL(s)/L(FM) if adequate fit with large sample size, deviance follows chi-square with n-p(p parameters). ?so adequate fit is H_0? small values of deviance(Or large p value) leads us to reject H0 so the current model is good. But a simpler method is calculate the ratio D/n-p------ the current model is not good if it is much greater than unity. (it is quite essentially equivalent to OLR's D=sse/$\sigma^2$ following chi-square with only small differnce of unknow $\sigma$)
+
+OR pearson chi square statisti(p437-438)

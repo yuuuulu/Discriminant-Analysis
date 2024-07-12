@@ -1,0 +1,687 @@
+---
+title: "DA"
+format: html
+editor: visual
+---
+
+## Discriminant analysis
+
+classification problems
+
+### Bayes claasifier
+
+Bayes theoretical boundary that minimizes the classification error $$
+P(Y=k|X=x)>P(Y=j|X=x)
+$$ (use P（X\|Y=k) and P(Y=k) for all "k"s.) for all j is not equal to k.
+
+### LDA
+
+assumes a common covariance matrix and normal distribution
+
+### QDA
+
+assumes their own nomal distribution's covariance matrix with normal distributions
+
+### Naive Bayes
+
+assumes independence
+
+Useful when p is large(QDA, LDA break down because of too many 2-d plot???)
+
+Gaussian navie bayes assumes each covariance matrix is diagonal
+
+### Why Discriminant Analysis?
+
+(1)Logistic regression is unstable when estimating parameters for well-separated classes(if perfectly, **????infinite coefficients**). LDA does not suffer from it (based on Bayes theo)
+
+(2)When n is small and predictors X is approximately normal in each class, **???LDA is more stable than the logistic regression model.**
+
+(3)**????LDA is popular when we have 2 more response classes because it provides a low-dimensional view of data.**
+
+(4)the dummy variable approach cannot be easily extended to accommodate qualitative responses with more than two levels
+
+#### LDA and Bayes classifier
+
+(1)LDA is less flexible than Bayes classifier(only linear decision boundaries)
+
+(2)Bayes classifier is optimal if true distributions are known(P(X,Y))
+
+(3)LDA assumes normally distributed classes with equal covariance matrices.
+
+(4)LDA is computationally simpler (strong assumptions)than Bayes classifier
+
+##### lda logistic and bayes decision
+
+Practical models such as LDA, logistic regression that use assumptions and approximations to estimate decision boundaries based on data. They aim to approximate the theoretical bayes decision boundaries but are constrained by the limitations of the assumptions they make on the data.
+
+### LDA example in the video
+
+```{r}
+# Load necessary libraries
+library(MASS)  # For LDA
+library(ROCR)  # For ROC curve and AUC
+library(ggplot2)  # For plotting
+# Load the ISLR package
+library(ISLR)
+
+
+# Load the Smarket dataset
+data(Smarket)
+
+# Set a seed for reproducibility
+set.seed(123)
+
+# Define the training set (using the data from 2001 to 2004)
+train <- (Smarket$Year < 2005)
+
+# Fit the LDA model using Lag1 and Lag2 as predictors
+lda.fit <- lda(Direction ~ Lag1 + Lag2, data = Smarket, subset = train)
+
+# Print LDA model summary
+print(lda.fit)
+lda.fit
+plot(lda.fit)
+
+# Make predictions on the 2005 data
+lda.pred <- predict(lda.fit, Smarket[!train, ])
+
+# Extract class predictions
+lda.class <- lda.pred$class
+
+# True labels for the test set
+Direction.2005 <- Smarket$Direction[!train]
+
+# Print the confusion matrix
+conf_matrix <- table(lda.class, Direction.2005)
+print(conf_matrix)
+
+# Calculate and print the accuracy
+lda_accuracy <- mean(lda.class == Direction.2005)
+cat("Accuracy:", lda_accuracy, "\n")
+
+# Print the posterior probabilities for the first 20 observations
+cat("Posterior probabilities for the first 20 observations:\n")
+print(lda.pred$posterior[1:20, 1])
+
+# Print the class predictions for the first 20 observations
+cat("Class predictions for the first 20 observations:\n")
+print(lda.class[1:20])
+
+# Count the number of observations with a posterior probability greater than 0.9
+count_high_prob <- sum(lda.pred$posterior[, 1] > 0.9)
+cat("Number of observations with a posterior probability greater than 0.9:", count_high_prob, "\n")
+
+# Extract posterior probabilities for the positive class ('Up')
+pred_prob <- lda.pred$posterior[, 2]  # Probabilities for the 'Up' class
+
+# Create a binary vector for the actual class labels (1 for 'Up', 0 for 'Down')
+true_labels_binary <- ifelse(Direction.2005 == "Up", 1, 0)
+
+# Create a prediction object for ROC curve
+pred_roc <- prediction(pred_prob, true_labels_binary)
+
+# Create a performance object for ROC curve
+perf_roc <- performance(pred_roc, measure = "tpr", x.measure = "fpr")
+
+# Calculate AUC
+auc <- performance(pred_roc, measure = "auc")
+auc_value <- auc@y.values[[1]]
+cat("AUC:", auc_value, "\n")
+
+# Create a data frame for plotting the ROC curve
+roc_data <- data.frame(
+  FPR = unlist(perf_roc@x.values),
+  TPR = unlist(perf_roc@y.values)
+)
+
+# Plot the ROC curve
+roc_plot <- ggplot(roc_data, aes(x = FPR, y = TPR)) +
+  geom_line(color = "blue") +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "red") +
+  labs(title = paste("ROC Curve for LDA Model (AUC =", round(auc_value, 4), ")"),
+       x = "False Positive Rate",
+       y = "True Positive Rate") +
+  theme_minimal()
+
+# Print the ROC plot
+print(roc_plot)
+
+```
+
+### the comparison between LDA and QDA in a classification
+
+```{r}
+# Load necessary libraries
+library(MASS)  # For LDA and QDA models
+
+# Set seed for reproducibility
+set.seed(123)  # For reproducibility of the random sampling
+
+# Create training and test sets
+train <- sample(1:150, 120)  # Randomly select 120 samples for the training set out of 150
+
+# Train LDA model
+lda_iris <- lda(x = iris[, -5], grouping = iris[, 5], subset = train)  # Fit the LDA model using the training set
+# Predict class labels for the test set
+pred_class <- predict(lda_iris, iris[-train, -5])$class  # Predict the classes of the test set
+# Generate confusion matrix for LDA
+lda_conf_matrix <- table(Actual = iris[-train, 5], Predicted = pred_class)  # Create confusion matrix to compare actual vs. predicted classes
+print("Confusion Matrix for LDA:")  # Print message
+print(lda_conf_matrix)  # Display the confusion matrix
+# Then there comes ROC curve but I could not draw it when it is not binary response
+# Calculate and print LDA accuracy
+lda_accuracy <- sum(diag(lda_conf_matrix)) / sum(lda_conf_matrix)  # Calculate accuracy as the proportion of correct classifications
+lda_accuracy_rounded <- round(lda_accuracy, 4)  # Round accuracy to 4 decimal places
+cat("Accuracy for LDA:", lda_accuracy_rounded, "\n")  # Print LDA accuracy
+
+# Train QDA model
+qda_iris <- qda(x = iris[, -5], grouping = iris[, 5], subset = train)  # Fit the QDA model using the training set
+# Predict class labels for the test set
+pred_class <- predict(qda_iris, iris[-train, -5])$class  # Predict the classes of the test set
+# Generate confusion matrix for QDA
+qda_conf_matrix <- table(Actual = iris[-train, 5], Predicted = pred_class)  # Create confusion matrix to compare actual vs. predicted classes
+print("Confusion Matrix for QDA:")  # Print message
+print(qda_conf_matrix)  # Display the confusion matrix
+
+# Calculate and print QDA accuracy
+qda_accuracy <- sum(diag(qda_conf_matrix)) / sum(qda_conf_matrix)  # Calculate accuracy as the proportion of correct classifications
+qda_accuracy_rounded <- round(qda_accuracy, 4)  # Round accuracy to 4 decimal places
+cat("Accuracy for QDA:", qda_accuracy_rounded, "\n")  # Print QDA accuracy
+
+# Calculate log-likelihood for LDA and QDA
+lda_logLik <- sum(log(predict(lda_iris, iris[-train, -5])$posterior[cbind(1:nrow(iris[-train, ]), as.numeric(iris[-train, 5]))]))  # Calculate log-likelihood for LDA
+qda_logLik <- sum(log(predict(qda_iris, iris[-train, -5])$posterior[cbind(1:nrow(iris[-train, ]), as.numeric(iris[-train, 5]))]))  # Calculate log-likelihood for QDA
+
+# Print log-likelihood values
+cat("Log-Likelihood for LDA:", lda_logLik, "\n")  # Print LDA log-likelihood
+cat("Log-Likelihood for QDA:", qda_logLik, "\n")  # Print QDA log-likelihood
+
+# Perform Likelihood Ratio Test (LRT)
+lrt_statistic <- -2 * (lda_logLik - qda_logLik)  # Compute the LRT statistic
+
+# Degrees of freedom for the LRT test
+df <- 2 * (ncol(iris) - 1) - 3  # Degrees of freedom: QDA has more parameters, so df = 2*number of features - parameters for LDA (LDA uses means and covariance)
+p_value <- pchisq(lrt_statistic, df, lower.tail = FALSE)  # Compute p-value for the LRT
+
+# Print LRT results
+cat("Likelihood Ratio Test Statistic:", lrt_statistic, "\n")  # Print LRT statistic
+cat("P-value for the Likelihood Ratio Test:", p_value, "\n")  # Print p-value for the LRT
+
+
+```
+
+### the comparison between the null model and LDA
+
+```{r}
+#### Iris Data
+library(MASS)
+library("ggthemes")
+library("GGally")
+library(hdrcde)
+library(KernSmooth)
+library("gridExtra")
+library("vcd")
+library(ggplot2)
+data(iris)
+head(iris)
+ggpairs(iris,aes(col=Species, alpha=0.4))
+```
+
+```{r}
+# LDA for iris data
+train<-sample(1:150,120)
+lda_iris<-lda(x=iris[train,-5],grouping=iris[train,5])
+pred_class<-predict(lda_iris,iris[-train,-5])$class
+### ???:$class
+conf_matrix <- table(Actual = iris[-train, 5], Predicted = pred_class)
+print(conf_matrix)
+accuracy <- sum(diag(conf_matrix)) / sum(conf_matrix)
+cat("Accuracy:", accuracy, "\n")
+
+# Function to calculate log-likelihood of LDA model
+logLikLDA <- function(lda_model, data, actual_classes) {
+  predicted <- predict(lda_model, data)
+  posterior <- predicted$posterior
+  log_lik <- sum(log(posterior[cbind(1:nrow(posterior), as.numeric(actual_classes))]))
+  return(log_lik)
+}
+
+# Log-likelihood of the full model
+logLik_full <- logLikLDA(lda_iris, iris[-train, -5], iris[-train, 5])
+
+# Fit the reduced model (null model: only class proportions)
+class_probs <- table(iris[train, 5]) / length(train)
+logLik_null <- sum(log(class_probs[as.numeric(iris[-train, 5])]))
+
+# Calculate the LRT statistic
+LRT_statistic <- -2 * (logLik_null - logLik_full)
+df <- length(levels(iris$Species)) - 1  # degrees of freedom
+
+# Perform the test
+p_value <- pchisq(LRT_statistic, df = df, lower.tail = FALSE)
+cat("LRT Statistic:", LRT_statistic, "\n")
+cat("Degrees of Freedom:", df, "\n")
+cat("p-value:", p_value, "\n")
+
+if (p_value < 0.05) {
+  cat("The full model significantly improves the fit compared to the null model.\n")
+} else {
+  cat("The full model does not significantly improve the fit compared to the null model.\n")
+}
+### ?:\n
+### why each time the accuracy(confution matrix is not the same??? maybe because of the random selection of training and testing data?)
+```
+
+### ROC=1.....
+
+```{r}
+# Load necessary libraries
+library(MASS)  # For LDA
+library(ROCR)  # For ROC curve and AUC
+library(ggplot2)  # For plotting
+
+# Load the iris dataset
+data(iris)
+
+# Filter the data to include only 'setosa' and 'versicolor'
+iris_binary <- iris[iris$Species %in% c("setosa", "versicolor"), ]
+
+# Convert 'Species' to a binary factor: 1 for 'setosa', 0 for 'versicolor'
+iris_binary$Species_binary <- ifelse(iris_binary$Species == "setosa", 1, 0)
+
+# Select only two variables for LDA
+iris_binary <- iris_binary[, c("Sepal.Length", "Sepal.Width", "Species_binary")]
+
+# Split the dataset into training (70%) and test (30%) sets
+set.seed(123)  # For reproducibility
+train_indices <- sample(1:nrow(iris_binary), 0.7 * nrow(iris_binary))
+train_set <- iris_binary[train_indices, ]
+test_set <- iris_binary[-train_indices, ]
+
+# Train the LDA model on the binary classification problem
+lda_model <- lda(Species_binary ~ Sepal.Length + Sepal.Width, data = train_set)
+
+# Predict the class probabilities on the test set
+predictions <- predict(lda_model, test_set[, c("Sepal.Length", "Sepal.Width")])
+pred_prob <- predictions$posterior[, 2]  # Extract probabilities for the positive class ('setosa')
+
+# Get true binary labels for the test set
+true_labels_binary <- test_set$Species_binary
+
+# Create a prediction object for ROC curve
+pred_roc <- prediction(pred_prob, true_labels_binary)
+
+# Create a performance object for ROC curve
+perf_roc <- performance(pred_roc, measure = "tpr", x.measure = "fpr")
+
+# Calculate AUC
+auc <- performance(pred_roc, measure = "auc")
+auc_value <- auc@y.values[[1]]
+cat("AUC:", auc_value, "\n")
+
+# Create a data frame for plotting the ROC curve
+roc_data <- data.frame(
+  FPR = unlist(perf_roc@x.values),
+  TPR = unlist(perf_roc@y.values)
+)
+
+# Plot the ROC curve
+roc_plot <- ggplot(roc_data, aes(x = FPR, y = TPR)) +
+  geom_line(color = "blue") +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "red") +
+  labs(title = paste("ROC Curve for LDA Model (AUC =", round(auc_value, 4), ")"),
+       x = "False Positive Rate",
+       y = "True Positive Rate") +
+  theme_minimal()
+
+# Print the ROC plot
+print(roc_plot)
+
+```
+
+### the comparison between Naive bayes and LDA
+
+```{r}
+# Load necessary libraries
+library(e1071)  # For naiveBayes
+library(MASS)   # For lda
+library(datasets)
+
+# Load the Iris dataset
+data(iris)
+
+# Set a seed for reproducibility
+set.seed(123)
+
+# Split the dataset into training and test sets (70% train, 30% test)
+sample_indices <- sample(1:nrow(iris), size = 0.7 * nrow(iris))
+train_set <- iris[sample_indices, ]
+test_set <- iris[-sample_indices, ]
+
+# Train the Naive Bayes model
+nb_model <- naiveBayes(Species ~ ., data = train_set)
+
+# Make predictions on the test set
+nb_predictions <- predict(nb_model, test_set)
+nb_conf_matrix <- table(Predicted = nb_predictions, Actual = test_set$Species)
+
+# Print the confusion matrix for Naive Bayes
+cat("Confusion Matrix for Naive Bayes:\n")
+print(nb_conf_matrix)
+
+# Calculate and print the accuracy for Naive Bayes
+nb_accuracy <- sum(diag(nb_conf_matrix)) / sum(nb_conf_matrix)
+cat("Accuracy for Naive Bayes:", round(nb_accuracy, 4), "\n")
+
+# Train the LDA model
+lda_model <- lda(Species ~ ., data = train_set)
+
+# Make predictions on the test set
+lda_predictions <- predict(lda_model, test_set)$class
+lda_conf_matrix <- table(Predicted = lda_predictions, Actual = test_set$Species)
+
+# Print the confusion matrix for LDA
+cat("\nConfusion Matrix for LDA:\n")
+print(lda_conf_matrix)
+
+# Calculate and print the accuracy for LDA
+lda_accuracy <- sum(diag(lda_conf_matrix)) / sum(lda_conf_matrix)
+cat("Accuracy for LDA:", round(lda_accuracy, 4), "\n")
+
+# Compute Log-Likelihood for Naive Bayes
+nb_logLik <- sum(log(predict(nb_model, test_set, type = "raw")[cbind(1:nrow(test_set), as.numeric(test_set$Species))]))
+cat("\nLog-Likelihood for Naive Bayes:", round(nb_logLik, 4), "\n")
+
+# Compute Log-Likelihood for LDA
+lda_logLik <- sum(log(predict(lda_model, test_set)$posterior[cbind(1:nrow(test_set), as.numeric(test_set$Species))]))
+cat("Log-Likelihood for LDA:", round(lda_logLik, 4), "\n")
+
+# Perform the Likelihood Ratio Test
+lrt_statistic <- -2 * (lda_logLik - nb_logLik)
+
+# Compute degrees of freedom for the LRT
+df <- 0  # Degrees of freedom for LRT between LDA and Naive Bayes is typically considered 0 in this case (complex models often require detailed adjustment)
+
+# Compute p-value for the LRT
+p_value <- pchisq(lrt_statistic, df, lower.tail = FALSE)
+cat("Likelihood Ratio Test Statistic:", round(lrt_statistic, 4), "\n")
+cat("P-value for the Likelihood Ratio Test:", round(p_value, 4), "\n")
+
+```
+
+### the comparison between LDA and logistic regression
+
+```{r}
+# Load necessary libraries
+library(MASS)
+library(glmnet)
+library(ggplot2)
+library(gridExtra)
+
+# Subset the data to exclude 'virginica' for binary classification
+iris_binary <- subset(iris, Species != "virginica")
+iris_binary$Species <- factor(iris_binary$Species)
+
+# Prepare data for glmnet
+x <- as.matrix(iris_binary[, -5])
+y <- iris_binary$Species
+
+# Fit regularized logistic regression model
+logistic_model <- cv.glmnet(x, y, family = "binomial", alpha = 0.5) # alpha=0.5 for elastic net
+
+# Fit LDA model
+lda_model <- lda(Species ~ ., data = iris_binary)
+
+# Predict probabilities from logistic regression
+logistic_pred <- predict(logistic_model, newx = x, type = "response", s = "lambda.min")
+logistic_class <- ifelse(logistic_pred > 0.5, "versicolor", "setosa")
+
+# Predict probabilities from LDA
+lda_pred <- predict(lda_model)$posterior
+lda_class <- ifelse(lda_pred[, "versicolor"] > 0.5, "versicolor", "setosa")
+
+# Confusion matrices for both models
+logistic_conf_matrix <- table(Actual = iris_binary$Species, Predicted = logistic_class)
+lda_conf_matrix <- table(Actual = iris_binary$Species, Predicted = lda_class)
+
+# Print confusion matrices
+cat("Confusion Matrix for Logistic Regression:\n")
+print(logistic_conf_matrix)
+
+cat("\nConfusion Matrix for LDA:\n")
+print(lda_conf_matrix)
+
+# Calculate and print accuracies
+logistic_accuracy <- sum(diag(logistic_conf_matrix)) / sum(logistic_conf_matrix)
+lda_accuracy <- sum(diag(lda_conf_matrix)) / sum(lda_conf_matrix)
+
+cat("Accuracy for Logistic Regression:", logistic_accuracy, "\n")
+cat("Accuracy for LDA:", lda_accuracy, "\n")
+
+# Log-likelihood for logistic regression
+logistic_logLik <- sum(dbinom(as.numeric(iris_binary$Species == "versicolor"), size = 1, prob = logistic_pred, log = TRUE))
+cat("Log-Likelihood for Logistic Regression:", logistic_logLik, "\n")
+
+# Log-likelihood for LDA
+lda_logLik <- sum(log(lda_pred[cbind(1:nrow(iris_binary), as.numeric(iris_binary$Species))]))
+cat("Log-Likelihood for LDA:", lda_logLik, "\n")
+
+# LRT statistic
+lrt_statistic <- -2 * (logistic_logLik - lda_logLik)
+cat("Likelihood Ratio Test Statistic:", lrt_statistic, "\n")
+
+# Degrees of freedom for the test
+df <- length(coef(logistic_model)) - 1 # Adjusted degrees of freedom for regularized model
+
+# P-value for the test
+p_value <- pchisq(lrt_statistic, df, lower.tail = FALSE)
+cat("P-value for the Likelihood Ratio Test:", p_value, "\n")
+
+# Create a grid of values for plotting decision boundaries
+plot_grid <- expand.grid(
+  Sepal.Length = seq(min(iris_binary$Sepal.Length), max(iris_binary$Sepal.Length), length.out = 100),
+  Sepal.Width = seq(min(iris_binary$Sepal.Width), max(iris_binary$Sepal.Width), length.out = 100),
+  Petal.Length = mean(iris_binary$Petal.Length),  # Use mean value for Petal.Length
+  Petal.Width = mean(iris_binary$Petal.Width)    # Use mean value for Petal.Width
+)
+plot_grid_matrix <- as.matrix(plot_grid)
+
+# Predict class probabilities for the grid points using logistic regression
+logistic_pred_grid <- predict(logistic_model, newx = plot_grid_matrix, type = "response", s = "lambda.min")
+logistic_class_grid <- ifelse(logistic_pred_grid > 0.5, "versicolor", "setosa")
+
+# Predict class probabilities for the grid points using LDA
+lda_pred_grid <- predict(lda_model, newdata = plot_grid)$posterior
+lda_class_grid <- ifelse(lda_pred_grid[, "versicolor"] > 0.5, "versicolor", "setosa")
+
+# Convert the grid predictions to data frames for plotting
+logistic_plot_grid <- cbind(plot_grid[, 1:2], Predicted = factor(logistic_class_grid, levels = c("setosa", "versicolor")))
+lda_plot_grid <- cbind(plot_grid[, 1:2], Predicted = factor(lda_class_grid, levels = c("setosa", "versicolor")))
+
+# Plot for logistic regression
+logistic_plot <- ggplot() +
+  geom_point(data = iris_binary, aes(x = Sepal.Length, y = Sepal.Width, color = Species), size = 2) +
+  geom_tile(data = logistic_plot_grid, aes(x = Sepal.Length, y = Sepal.Width, fill = Predicted), alpha = 0.3) +
+  scale_color_manual(values = c("setosa" = "red", "versicolor" = "blue")) +
+  scale_fill_manual(values = c("setosa" = "red", "versicolor" = "blue")) +
+  labs(title = "Logistic Regression Classification Boundaries") +
+  theme_minimal()
+
+# Plot for LDA
+lda_plot <- ggplot() +
+  geom_point(data = iris_binary, aes(x = Sepal.Length, y = Sepal.Width, color = Species), size = 2) +
+  geom_tile(data = lda_plot_grid, aes(x = Sepal.Length, y = Sepal.Width, fill = Predicted), alpha = 0.3) +
+  scale_color_manual(values = c("setosa" = "red", "versicolor" = "blue")) +
+  scale_fill_manual(values = c("setosa" = "red", "versicolor" = "blue")) +
+  labs(title = "LDA Classification Boundaries") +
+  theme_minimal()
+
+# Arrange the two plots side by side
+grid.arrange(logistic_plot, lda_plot, ncol = 2)
+
+```
+
+```{r}
+# Check for perfect separation
+plot(iris_binary$Sepal.Length, iris_binary$Sepal.Width, col = iris_binary$Species)
+
+library(glmnet)
+
+# Prepare data for glmnet
+x <- as.matrix(iris_binary[, -5])
+y <- iris_binary$Species
+
+# Fit regularized logistic regression model
+logistic_model <- cv.glmnet(x, y, family = "binomial", alpha = 0.5) # alpha=0.5 for elastic net
+logistic_model
+# Fit LDA model
+lda_model <- lda(Species ~ ., data = iris_binary)
+lda_model
+# Predict probabilities from logistic regression
+logistic_pred <- predict(logistic_model, newx = x, type = "response", s = "lambda.min")
+logistic_class <- ifelse(logistic_pred > 0.5, "versicolor", "setosa")
+
+# Predict probabilities from LDA
+lda_pred <- predict(lda_model)$posterior
+lda_class <- ifelse(lda_pred[, "versicolor"] > 0.5, "versicolor", "setosa")
+
+# Confusion matrices for both models
+logistic_conf_matrix <- table(Actual = iris_binary$Species, Predicted = logistic_class)
+lda_conf_matrix <- table(Actual = iris_binary$Species, Predicted = lda_class)
+
+# Print confusion matrices
+cat("Confusion Matrix for Logistic Regression:\n")
+print(logistic_conf_matrix)
+
+cat("\nConfusion Matrix for LDA:\n")
+print(lda_conf_matrix)
+
+# Calculate and print accuracies
+logistic_accuracy <- sum(diag(logistic_conf_matrix)) / sum(logistic_conf_matrix)
+lda_accuracy <- sum(diag(lda_conf_matrix)) / sum(lda_conf_matrix)
+
+cat("Accuracy for Logistic Regression:", logistic_accuracy, "\n")
+cat("Accuracy for LDA:", lda_accuracy, "\n")
+# Log-likelihood for logistic regression
+logistic_logLik <- sum(dbinom(as.numeric(iris_binary$Species == "versicolor"), size = 1, prob = logistic_pred, log = TRUE))
+cat("Log-Likelihood for Logistic Regression:", logistic_logLik, "\n")
+
+# Log-likelihood for LDA
+lda_logLik <- sum(log(lda_pred[cbind(1:nrow(iris_binary), as.numeric(iris_binary$Species))]))
+cat("Log-Likelihood for LDA:", lda_logLik, "\n")
+
+# LRT statistic
+lrt_statistic <- -2 * (logistic_logLik - lda_logLik)
+cat("Likelihood Ratio Test Statistic:", lrt_statistic, "\n")
+
+# Degrees of freedom for the test
+df <- length(coef(logistic_model)) - 1 # Adjusted degrees of freedom for regularized model
+
+# P-value for the test
+p_value <- pchisq(lrt_statistic, df, lower.tail = FALSE)
+cat("P-value for the Likelihood Ratio Test:", p_value, "\n")
+
+
+```
+
+# kNN
+
+```{r}
+library(class)
+# Bank Data
+data(bank,package="gclus")
+head(bank)
+bank$Status<-factor(bank$Status)
+
+ggpairs(bank, aes(alpha=0.4))
+ggpairs(bank,aes(col=Status, alpha=0.4))
+
+test_bnk <- seq(from=1,to=nrow(bank),by=4)
+train_bnk <- c(1:nrow(bank))[-test_bnk]
+
+train.set <- bank[train_bnk,]
+test.set <- bank[test_bnk,]
+labels <- factor(x=bank[train_bnk,1])
+
+# kNN for k = 1
+output <- knn(train=train.set[,-1], test=test.set[,-1], cl=labels, k=1, prob=TRUE) 
+table(output,test.set[,1])
+
+# kNN for k = 1,3,5,7,9
+for(k in c(1,3,5,7,9)){
+	cat(paste("There are",k,"nearest neighbours"),"\n")
+	output <- knn(train=train.set[,-1], test=test.set[,-1], cl=labels, k=k, prob=TRUE)
+	print(output)
+	print(table(output,test.set[,1]))
+}
+```
+
+```{r}
+
+### Wine data (p=13) from gclus
+data(wine,package="gclus")
+head(wine)
+wine$Class<-factor(wine$Class)
+ggpairs(wine,aes(col=Class, alpha=0.4))
+
+s.wine <- scale(wine[,-1])
+s.wine <- cbind(wine[,1],s.wine)
+
+train.vals <- sample(c(1:nrow(s.wine)),120)
+
+train.set <- s.wine[train.vals,]
+test.set <- s.wine[-train.vals,]
+labels <- factor(x=s.wine[train.vals,1])
+
+prop <- 0.8
+validation.set <- sample(c(1:nrow(train.set)),size=prop*length(train.vals))
+labels.validation.set <- factor(x=train.set[validation.set,1])
+
+for(k in c(1,3,5,7,9,11,13,15)){
+	cat(paste("There are",k,"nearest neighbours in the validation set"),"\n")
+	output <- knn(train=train.set[validation.set,-1], test=train.set[-validation.set,-1], cl=labels.validation.set, k=k, prob=TRUE)
+	print(output)
+	class.table <- table(output,train.set[-validation.set,1])
+	print(class.table)
+	print(sum(diag(class.table))/sum(class.table))
+}
+	
+for(k in c(7,9,11)){
+	cat(paste("There are",k,"nearest neighbours"),"\n")
+	output <- knn(train=train.set[,-1], test=test.set[,-1], cl=labels, k=k, prob=TRUE)
+	print(output)
+	class.table <- table(output,test.set[,1])
+	print(class.table)
+	print(sum(diag(class.table))/sum(class.table))
+}
+	
+# And this is what happens if the data are not scaled...
+train.vals <- sample(c(1:nrow(wine)),120)
+
+train.set <- wine[train.vals,]
+test.set <- wine[-train.vals,]
+labels <- factor(x=wine[train.vals,1])
+
+prop <- 0.8
+validation.set <- sample(c(1:nrow(train.set)),size=prop*length(train.vals))
+labels.validation.set <- factor(x=train.set[validation.set,1])
+
+for(k in c(1,3,5,7,9,11,13,15)){
+	cat(paste("There are",k,"nearest neighbours in the validation set"),"\n")
+	output <- knn(train=train.set[validation.set,-1], test=train.set[-validation.set,-1], cl=labels.validation.set, k=k, prob=TRUE)
+	print(output)
+	class.table <- table(output,train.set[-validation.set,1])
+	print(class.table)
+	print(sum(diag(class.table))/sum(class.table))
+}
+	
+for(k in c(9)){
+	cat(paste("There are",k,"nearest neighbours"),"\n")
+	output <- knn(train=train.set[,-1], test=test.set[,-1], cl=labels, k=k, prob=TRUE)
+	print(output)
+	class.table <- table(output,test.set[,1])
+	print(class.table)
+	print(sum(diag(class.table))/sum(class.table))
+}
+
+```
