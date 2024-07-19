@@ -22,3 +22,13 @@ E(y)=$\pi$ is a constant-proba-of success. mle estimates y/n.
 so a large value of LR statistics indicates at least one of the regressor variables in logistic model is important \#### (2) deviance saturated model and the current model(full model) D= 2lnL(s)/L(FM) if adequate fit with large sample size, deviance follows chi-square with n-p(p parameters). ?so adequate fit is H_0? small values of deviance(Or large p value) leads us to reject H0 so the current model is good. But a simpler method is calculate the ratio D/n-p------ the current model is not good if it is much greater than unity. (it is quite essentially equivalent to OLR's D=sse/$\sigma^2$ following chi-square with only small differnce of unknow $\sigma$)
 
 OR pearson chi square statisti(p437-438)
+
+
+
+
+# eg.harzard propotional functions' likelihood function vs bernouli likelihood function
+## hazard
+the multiplication of just the biggest/ most probable harzard rate based on the real situation that has happened yet
+
+## bernouli
+the biggest probability of the real situation that has happened.
