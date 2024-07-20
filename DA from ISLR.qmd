@@ -3,6 +3,7 @@ title: "DA"
 format: html
 editor: visual
 ---
+This is my learning summary of the book "Introduction to statistical learning".
 
 ## Discriminant analysis
 
